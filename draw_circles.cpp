@@ -4,6 +4,7 @@
 #include <utility>
 #include <iostream>
 #include <sys/time.h>
+
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -17,6 +18,7 @@ typedef pair<int, int> Pair2i;      // coord (x, y)
 typedef pair<Pair2i, float> Pairc;  // circle (center, raius)
 
 Mat frame, hsv_frame, mask, output;
+Vec3b get_hsv(Mat image);
 Scalar hsv_min = Scalar(0.11*256, 0.60*256, 0.40*256, 0);
 Scalar hsv_max = Scalar(0.25*256, 1.00*256, 1.00*256, 0);
 
@@ -68,28 +70,33 @@ int main(int argc, char** argv){
 		find_circles(mask, circles);
 
 		// TO-DO: determine if false circle
+
+		// change - theo
+		int x, y, h, w;
+		Rect circle_rect;
+
 		for(Pairc p: circles){
 			Point2f center(p.first.first, p.first.second);
 			float radius = p.second;
-			// draw the circle center
+			// draw the circle center;
 			// circle(frame, center, 2, Scalar(0,255,0), -1, 8, 0);
 			// draw the circle outline
-			circle(frame, center, radius, Scalar(0,0,255), 2, 8, 0);
-		}
 
-		// namedWindow("input", WINDOW_KEEPRATIO);
-		// resizeWindow("input", 800, 800);
-		// imshow("input", mask);
-		// waitKey(0);
+			x = (center.x - radius);
+			y = (center.y - radius);
+			h = radius * 2;
+			w = radius * 2;
+			circle_rect = Rect(x, y, h, w);
+
+			Vec3b hsv = get_hsv(frame(circle_rect));
+			rectangle(frame, circle_rect, Scalar(255,255,255), 2, 8, 0);
+			circle(frame, center, radius, Scalar(0,0,255), 2, 8, 0);
+		}		
+
 		sprintf(out_name, "out%s", strrchr(filename, '/'));
+		printf("%s: %s\n", "Scan output: ", out_name);
 		imwrite(out_name, frame);
 
-		// print_clusters(all);
-		// print_circles(circles);
-
-		// gettimeofday(&tv2, 0);
-		// time = tv2.tv_sec-tv1.tv_sec + (tv2.tv_usec-tv1.tv_usec)/1000000.0;
-		// printf("time taken (total): %f\n", time);
 	}
 
 	free(filename);
@@ -150,34 +157,28 @@ void find_circles(Mat& img, vector<Pairc>& circles){
 	// printf("time taken (find circle): %f\n", time);
 }
 
+Vec3b get_hsv(Mat image){
+	// Mat copy_img = image;
+	// Rect roi = Rect(10,20,40,60);
+	// Mat roi_img = copy_img(region);
+	// rectangle(copy_img, roi, Scalar(255,255,255), 1, 8, 0);
+	Mat HSV;
+	// Mat RGB = copy_img(roi); // use your x and y value
+
+	cvtColor(image, HSV, COLOR_BGR2HSV);
+	Vec3b hsv = HSV.at<Vec3b>(0,0);
+	int H = hsv.val[0]; //hue
+	int S = hsv.val[1]; //saturation
+	int V = hsv.val[2]; //value
+	printf("H: %i\tS: %i\tV: %i\n", H, S, V);
+	return hsv;
+}
+
 void process_node(Mat& m, queue<Pair2i>& q, int x, int y){
 	if(x < m.rows && y > 0 && y < m.cols && m.at<unsigned char>(x, y)){
 		q.push(make_pair(x, y));
 		m.at<unsigned char>(x, y) = 0;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
